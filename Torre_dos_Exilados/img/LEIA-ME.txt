@@ -1,0 +1,9 @@
+PASTA DE IMAGENS DAS CARTAS
+
+1) Coloque aqui as imagens (png, jpg ou webp). Proporção ideal da arte: 58 x 35 mm (cerca de 1740 x 1050 px).
+2) Abra o arquivo imagens.js: cada linha tem o NOME DA CARTA e o NOME DO ARQUIVO da imagem.
+   Exemplo:  "Orc": "orc.png",   -> a carta Orc carrega a imagem img/orc.png
+3) Já vem preenchido com um nome sugerido para cada carta. Basta salvar a imagem com esse nome
+   ou editar o nome no imagens.js para o nome do seu arquivo.
+4) Abra Cartas_Torre_dos_Exilados.html (F5). Carta sem imagem mostra o desenho padrão.
+5) As cópias de uma mesma carta usam a mesma imagem.

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torre dos Exilados</title>
+<meta name="description" content="Torre dos Exilados: jogo de tabuleiro de exploração e combate. Desça a torre andar por andar e escape antes dos outros exilados. Modo solo contra 2 NPCs.">
+<meta name="theme-color" content="#13100e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B0%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#13100e;--p1:#1d1814;--p2:#2a221b;--ln:#4a3b2c;--ouro:#d4a24c;--tx:#eadfca;--mut:#a89a82;--ok:#6fbf73;--ruim:#d9604c;--sombra:0 4px 14px #0009}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:Georgia,'Times New Roman',serif;font-size:15px}
+.oculto{display:none!important}
+button{font-family:inherit;cursor:pointer}
+.btn{background:var(--p2);color:var(--tx);border:1px solid var(--ouro);padding:8px 14px;border-radius:6px;font-size:14px;transition:.15s}
+.btn:hover:not([disabled]){background:var(--ouro);color:#1a1209}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.ok{background:var(--ouro);color:#1a1209;font-weight:bold}
+
+/* intro */
+#intro{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at top,#2c2118,#0d0a08)}
+.intro-box{max-width:560px;text-align:center;background:var(--p1);border:1px solid var(--ln);padding:34px 30px;border-radius:12px;box-shadow:var(--sombra)}
+.intro-box h1{margin:0 0 4px;color:var(--ouro);font-size:34px;letter-spacing:2px}
+.intro-box .sub{color:var(--mut);font-style:italic;margin-bottom:18px}
+.intro-box p{line-height:1.5;text-align:left}
+.intro-box label{display:block;margin:10px 0;text-align:left;color:var(--mut)}
+.intro-box input[type=text]{width:100%;padding:9px;background:#0f0c0a;color:var(--tx);border:1px solid var(--ln);border-radius:6px;font-size:15px;margin-top:4px}
+.intro-box .btns{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+
+/* jogo */
+#jogo{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#jogo header{flex:none}
+#jogo main{flex:none;height:var(--topoH,58vh);min-height:120px;overflow:auto}
+#divisor{flex:none;height:14px;margin:0 10px;cursor:row-resize;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none}
+#divisor::before{content:'';width:90px;height:5px;border-radius:3px;background:var(--ln);transition:.15s}
+#divisor:hover::before,#divisor.arrasta::before{background:var(--ouro);width:140px}
+body.redimensionando{cursor:row-resize;user-select:none}
+#jogo #jogador{flex:1;min-height:0;overflow-y:auto;margin:0 10px 10px}
+header{display:flex;align-items:center;gap:14px;padding:8px 14px;background:#0c0907;border-bottom:1px solid var(--ln);flex-wrap:wrap}
+header h1{margin:0;font-size:18px;color:var(--ouro);letter-spacing:1px}
+#banner{display:flex;align-items:center;gap:16px;flex:1;flex-wrap:wrap}
+.rod{background:var(--ouro);color:#1a1209;font-weight:bold;padding:4px 10px;border-radius:4px;font-size:13px}
+.ordem{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;padding:4px 10px;border:2px solid var(--ln);border-radius:20px;background:var(--p1);opacity:.65;font-size:13px}
+.chip.ativo{opacity:1;border-color:var(--c);box-shadow:0 0 12px var(--c);background:#2d2418}
+.chip .seta{color:var(--c);font-weight:bold;font-size:12px;animation:pisca 1s infinite}
+@keyframes pisca{50%{opacity:.3}}
+.fase{color:var(--mut);font-size:14px}
+body.meuturno header{background:#2a2010}
+body.meuturno .fase b::after{content:' (SEU TURNO)'}
+.hdr-ctl{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--mut)}
+.hdr-ctl .btn{padding:4px 10px;font-size:13px}
+main{flex:1;display:grid;grid-template-columns:230px 1fr 290px;gap:10px;padding:10px;align-items:start}
+#torre,#rivais,#centro,#jogador{background:var(--p1);border:1px solid var(--ln);border-radius:8px;padding:10px}
+#torre{padding:8px}
+#torre h3{margin:0 0 5px;color:var(--ouro);font-size:14px}
+.andar{display:flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid var(--ln);border-radius:5px;margin-bottom:3px;background:var(--p2);min-height:31px}
+.andar.ativo{border-color:var(--ouro);background:#3a2c1a}
+.andar.saida{border-style:dashed;border-color:#7ab87d}
+.andar .num{font-size:16px;font-weight:bold;color:var(--ouro);width:22px;text-align:center}
+.andar .inf{flex:1;line-height:1.05;min-width:0}.andar .an{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.andar .bn{font-size:10px;color:var(--mut)}
+.toks{display:flex;gap:1px}.tok{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:1px solid #000}
+.porta{text-align:center;color:#7ab87d;margin-top:3px;font-size:12px}
+#centro{display:flex;flex-direction:column;gap:10px;min-height:420px}
+#revelada{display:flex;align-items:center;gap:14px;background:var(--p2);border:1px solid var(--ln);border-radius:8px;padding:10px;min-height:150px}
+#revelada:empty::before{content:'Nenhuma carta revelada ainda.';color:var(--mut)}
+#revelada.flash{animation:flash .8s}
+@keyframes flash{0%{box-shadow:0 0 0 0 var(--ouro)}40%{box-shadow:0 0 22px 4px var(--ouro)}100%{box-shadow:none}}
+.rev-tit{font-weight:bold;color:var(--ouro);max-width:120px}
+.rev-txt{white-space:pre-line;font-size:13px;color:var(--mut);flex:1}
+#log{height:300px;overflow-y:auto;background:#0f0c0a;border:1px solid var(--ln);border-radius:6px;padding:6px;font-size:13px}
+.ln{padding:2px 6px;border-left:3px solid var(--ln);margin:1px 0;line-height:1.35}
+.ln.ef{color:var(--mut);font-style:italic;font-size:12.5px;padding-left:22px}
+.ln.turno{margin-top:8px;background:#2a2010;color:var(--ouro);font-weight:bold;border-left-color:var(--ouro)}
+#toasts{position:fixed;top:12px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:8px;width:min(340px,calc(100vw - 24px));pointer-events:none}
+.toast{display:flex;gap:10px;align-items:center;background:#1b1612f2;border:1px solid var(--ln);border-left:5px solid var(--c,var(--ouro));border-radius:8px;padding:9px 12px;box-shadow:0 6px 18px #000a;animation:toastIn .25s ease-out;transition:opacity .35s,transform .35s}
+.toast.sai{opacity:0;transform:translateX(30px)}
+.toast .ic{font-size:26px;line-height:1}
+.toast .tt{font-weight:bold;font-size:14px;color:var(--c,var(--ouro))}
+.toast .tx{font-size:12.5px;color:#e8dcc8;line-height:1.3}
+.toast.combate,.toast.perigo{background:#2a1814F2}.toast.inter{background:#14261aF2}.toast.outro{background:#1f1d1bF2}
+.obj-prog{display:flex;align-items:center;gap:8px;margin:4px 0 2px;font-size:12px;color:var(--ouro)}
+.obj-bar{flex:1;height:6px;background:#0008;border-radius:3px;overflow:hidden}
+.obj-bar i{display:block;height:100%;background:var(--ouro);transition:width .4s}
+.obj-prog.ok{color:var(--ok)}.obj-prog.ok .obj-bar i{background:var(--ok)}
+.obj-prog span{white-space:nowrap;font-weight:bold}
+/* faixa de status do topo */
+#status{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;border:1px solid var(--ln);border-left:6px solid var(--cc,#7d776d);background:#1d1b19;font-size:15px;min-height:44px}
+#status:empty{display:none}
+#status .st-ic{font-size:22px}
+#status .st-tx{color:var(--tx);flex:1}
+#status.flash{animation:flash .8s}
+#status.outro{--cc:#b5ada0}#status.inter{--cc:#6fbf73;background:#14221a}#status.combate{--cc:#e0614c;background:#2a1513}
+#status.vit{--cc:#e6b84e;background:#2a2210}#status.desc{--cc:#6aaee0;background:#13202c}#status.perigo{--cc:#e8923a;background:#2a1d10}#status.fim{--cc:#b98be0;background:#201830}
+#status{position:relative;overflow:hidden}
+#status.cena{box-shadow:0 0 0 2px var(--cc),0 0 14px var(--cc)}
+#status.pausado{box-shadow:0 0 0 2px var(--cc),0 0 22px var(--cc);animation:none}
+#status .btn{padding:6px 14px;white-space:nowrap}
+#status .st-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:#0006}
+#status .st-bar i{display:block;height:100%;background:var(--cc);transform-origin:left;animation:cenaBar linear forwards}
+#status.pensa .st-ic{animation:pisca 1s infinite}
+/* cenas de apresentação */
+.modalbox.cenabox{max-width:520px;text-align:center;padding:26px 28px 20px;border-width:3px;animation:cenaIn .3s ease-out}
+@keyframes cenaIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.cena-ic{font-size:54px;line-height:1}
+.cena-quem{font-size:15px;font-weight:bold;margin-top:6px;letter-spacing:1px}
+.cena-tit{font-size:24px;font-weight:bold;margin:6px 0 8px;color:var(--cc)}
+.cena-tx{color:var(--tx);line-height:1.45;margin:6px 0 10px;font-size:15px}
+.cena .grade{justify-content:center;max-height:none;overflow:visible;margin:6px 0}
+.cena-bar{height:5px;background:#0006;border-radius:3px;overflow:hidden;margin:12px 0}
+.cena-bar i{display:block;height:100%;width:100%;background:var(--cc);transform-origin:left;animation:cenaBar linear forwards}
+@keyframes cenaBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.cena-bts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.cena-dica{font-size:11px;color:var(--mut);margin-top:8px}
+.cenabox.pausada .cena-bar i{opacity:.4}
+.modalbox.outro{--cc:#b5ada0;border-color:#7d776d;background:#1d1b19}
+.modalbox.inter{--cc:#6fbf73;border-color:#4f9a55;background:#14221a}
+.modalbox.combate{--cc:#e0614c;border-color:#c0402e;background:#2a1513}
+.modalbox.vit{--cc:#e6b84e;border-color:#d4a24c;background:#2a2210}
+.modalbox.desc{--cc:#6aaee0;border-color:#4a8cc0;background:#13202c}
+.modalbox.perigo{--cc:#e8923a;border-color:#c8742a;background:#2a1d10}
+.modalbox.fim{--cc:#b98be0;border-color:#9468c4;background:#201830}
+.toast.vit{background:#14261aF2}.toast.der{background:#2a1414F2}.toast.desc{background:#14202aF2}.toast.fim{background:#2a2210F2}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.pj{background:var(--p2);border:1px solid var(--ln);border-left:4px solid var(--c);border-radius:7px;padding:8px;margin-bottom:8px}
+.pj.ativo{box-shadow:0 0 12px var(--c)}
+.pj-top{display:flex;align-items:center;gap:6px}.av{font-size:20px}
+.ptag{margin-left:auto;font-size:10px;background:var(--c);color:#111;padding:1px 6px;border-radius:3px;font-weight:bold}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:5px 0;font-size:13px}
+.stats.grande{font-size:15px}.stats .pod{color:var(--ouro);font-weight:bold;cursor:help}
+.id{font-size:12px;color:var(--mut);margin-bottom:4px}
+.minis{display:flex;flex-wrap:wrap;gap:3px}.mini{font-size:10.5px;background:#0f0c0a;border:1px solid var(--ln);border-radius:3px;padding:1px 5px;cursor:help}
+.mini.mg{border-width:2px}.mini.v{opacity:.5}
+.vazio,.vazioSlot{color:var(--mut);font-size:12px;font-style:italic}
+.baralhos{font-size:12px;color:var(--mut);display:grid;gap:3px;padding:6px}
+.chave{font-size:15px}
+#jogador{margin:0 10px 12px}
+.meu-topo{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:6px}
+.meu-id{display:flex;align-items:center;gap:8px;font-size:17px}
+.barra{display:none;gap:8px;flex-wrap:wrap;align-items:center;padding:8px;margin-bottom:8px;border:1px dashed var(--ouro);border-radius:6px;background:#261d10}
+.barra.on,.barra:not(:empty){display:flex}
+.barra:empty{display:none}
+.barra .dica{flex-basis:100%;font-size:13px;color:var(--ouro)}
+.meu-corpo{display:grid;grid-template-columns:minmax(250px,330px) 230px 1fr 220px;gap:12px}
+#vdesc{position:fixed;inset:0;background:#000c;z-index:40;overflow:auto;padding:14px;display:flex;justify-content:center;align-items:flex-start}
+.vd-box{max-height:none;margin:auto}
+.vd-abas{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.vd-grade{max-height:none;overflow:visible}
+.baralhos .lnk{cursor:pointer;text-decoration:underline dotted;color:var(--ouro)}
+.baralhos .lnk:hover{text-decoration:underline}
+.arma-bt{margin-top:3px;width:100%;padding:3px 2px;font-size:11px;font-family:inherit;border:1px solid var(--ouro);border-radius:5px;background:#1a1209;color:var(--ouro);cursor:pointer}
+.arma-bt:hover{background:#3a2c1a}
+.arma-bt.on{background:var(--ouro);color:#1a1209;font-weight:bold;animation:pisca 1.4s infinite}
+.card.armada{box-shadow:0 0 0 2px var(--ouro),0 0 14px var(--ouro)}
+.colId{display:grid;gap:8px;align-content:start}.colId .slot.dbl{grid-column:auto}.colId .idrow{flex-direction:column;align-items:stretch}.colId .idrow .card{align-self:center}
+.rot{font-size:12px;color:var(--mut);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px}
+.equip{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start}
+.slot{background:var(--p2);border:1px solid var(--ln);border-radius:6px;padding:5px;min-height:70px}
+.slot.dbl{grid-column:1/3}.slot .row{display:flex;gap:5px;flex-wrap:wrap}
+.mao{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start}
+.objs{display:grid;gap:6px}
+.obj{background:var(--p2);border:1px solid var(--ln);border-radius:6px;padding:6px;font-size:12px;display:grid;gap:2px}
+.obj b{color:var(--ouro)}.obj i{color:var(--ok);font-style:normal}
+
+/* cartas */
+.card{width:118px;background:linear-gradient(#2c241c,#1a1511);border:2px solid #6b5a43;border-radius:8px;padding:4px;display:flex;flex-direction:column;gap:2px;position:relative;font-size:11px;flex:none;user-select:none}
+.card.peq{width:92px;font-size:10px}
+.card.clicavel,.card[class*="t-"]{cursor:default}
+.card.clicavel:hover{transform:translateY(-4px);border-color:var(--ouro);cursor:pointer;z-index:2}
+.card.sel{border-color:#7ec8ff;box-shadow:0 0 10px #7ec8ff}
+.card.virada{filter:grayscale(.7);transform:rotate(4deg)}
+.card .art{height:58px;background:#0e0b09;border-radius:5px;display:grid;place-items:center;overflow:hidden;position:relative}
+.card.peq .art{height:44px}
+.card .art .ico{font-size:28px;opacity:.9}
+.card .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card .nm{font-weight:bold;text-align:center;line-height:1.1;min-height:24px;display:grid;place-items:center}
+.card .st{text-align:center;color:var(--ouro);font-size:10.5px}
+.card .cor{height:4px;border-radius:2px}
+.card .vir{position:absolute;top:3px;right:3px;background:#000b;font-size:9px;padding:1px 4px;border-radius:3px}
+.t-monstro{border-color:#a8483b}.t-mod{border-color:#c96a2b}.t-armadilha{border-color:#8a4a8a}.t-bau{border-color:#c9a227}.t-saida{border-color:#4a8f5a}
+.t-descanso{border-color:#d98a3b}.t-evento{border-color:#5a7fb8}.t-invocacao{border-color:#b83a6a}.t-magia{border-color:#6a5acd}
+.t-consumivel{border-color:#3aa6a0}.t-especial{border-color:#b8b83a}.t-raca,.t-classe{border-color:#d4a24c}
+
+/* modal */
+#modal{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;z-index:50;padding:12px;overflow:auto}
+.modalbox{background:var(--p1);border:2px solid var(--ouro);border-radius:10px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:18px;box-shadow:var(--sombra)}
+.modalbox.larga{max-width:860px}
+.pk h2{margin:0 0 8px;color:var(--ouro);font-size:20px}
+.txt{white-space:pre-line;line-height:1.45;color:var(--tx)}
+.opcoes{display:grid;gap:7px;margin-top:10px}
+.opt{display:flex;align-items:center;gap:10px;text-align:left;background:var(--p2);color:var(--tx);border:1px solid var(--ln);border-radius:7px;padding:10px 12px;font-size:14px}
+.opt:hover:not([disabled]){border-color:var(--ouro);background:#3a2c1a}
+.opt .otx{display:grid;gap:2px}.opt small{color:var(--mut);font-size:12px}
+.opt.fechar{justify-content:center;color:var(--mut)}
+.grade{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;max-height:52vh;overflow:auto;padding:4px}
+.cont{color:var(--mut);margin:6px 0}
+.linha{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.detalhe{display:flex;flex-wrap:wrap;gap:14px}.detalhe .dtx{flex:1;min-width:200px}.detalhe .opcoes{flex-basis:100%}
+.rtxt p{line-height:1.5;margin:8px 0}
+/* painel de combate */
+.cb{background:#0f0c0a;border:1px solid var(--ln);border-radius:8px;padding:10px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center}
+.cb-mons{display:flex;gap:8px;flex-wrap:wrap}
+.cb-mon{text-align:center;font-size:12px}.cb-pm{color:var(--ruim);font-weight:bold}.cb-pd{font-size:11px;color:var(--mut);line-height:1.3;max-width:200px;text-align:left}.cb-pd div{border-bottom:1px dotted var(--ln)}
+.cb-mod{color:var(--mut);font-size:11px}
+.cb-vs{display:flex;align-items:center;justify-content:center;gap:18px;font-size:12px;color:var(--mut)}
+.cb-col{text-align:center}
+.cb-n{font-size:38px;font-weight:bold;line-height:1}.cb-n.ok{color:var(--ok)}.cb-n.ruim{color:var(--ruim)}.cb-n.mon{color:var(--ruim)}
+.cb-vs .x{font-size:18px}
+.cb-det{grid-column:1/3;margin:0;padding-left:18px;columns:2;font-size:12px;color:var(--mut)}
+.cb-aviso{grid-column:1/3;font-size:12px;color:#e0b060;background:#2a2010;border:1px dashed var(--ouro);border-radius:6px;padding:6px 8px;display:grid;gap:2px}
+.cb-nota{grid-column:1/3;color:var(--ok);font-size:12px}
+.grade:has(.cartaDesc){max-height:none;overflow:visible}
+.cartaDesc.clic{cursor:pointer;padding:4px;border-radius:8px}.cartaDesc.clic:hover{background:#3a2c1a}
+.cartaDesc{width:150px;display:flex;flex-direction:column;gap:5px;align-items:center}.cartaDesc .card{width:118px}.cd-t{font-size:11px;color:var(--mut);white-space:pre-line;line-height:1.3}
+.idrow{align-items:flex-start}.idtxt{flex:1;min-width:120px;font-size:11.5px;color:var(--mut);white-space:pre-line;line-height:1.35}
+#fim{position:fixed;inset:0;background:#000d;z-index:99;display:flex;align-items:center;justify-content:center}
+.fimbox{background:var(--p1);border:2px solid var(--ouro);padding:36px;border-radius:12px;text-align:center;max-width:520px}
+.fimbox h1{color:var(--ouro);margin:0 0 12px}.peq{font-size:13px;color:var(--mut)}
+@media(max-width:1000px){
+  #jogo{height:auto;overflow:visible}
+  #jogo main{height:auto;overflow:visible}
+  #divisor{display:none}
+  #jogo #jogador{overflow:visible}
+  main{grid-template-columns:1fr}
+  .meu-corpo{grid-template-columns:1fr}
+  #log{height:220px}
+  .cb{grid-template-columns:1fr}.cb-det{columns:1}
+}
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <div class="intro-box">
+    <h1>TORRE DOS EXILADOS</h1>
+    <div class="sub">“Todo exílio tem uma saída. Poucos a encontram.”</div>
+    <p>Vocês foram exilados no topo de uma torre viva. A única saída é <b>para baixo</b>: andar por andar, até o andar 1. Quem sair primeiro é perdoado — os outros ficam condenados.</p>
+    <p>Você jogará contra <b>2 NPCs</b>, em turnos: <b>Você → Charles → Genine</b>. O turno atual fica sempre marcado no topo da tela.</p>
+    <label>Seu nome <input type="text" id="nome" value="Você" maxlength="20"></label>
+    <label><input type="checkbox" id="rapido"> Animações rápidas</label>
+    <label><input type="checkbox" id="auto"> Modo observador (a IA joga por você — para ver uma partida)</label>
+    <div class="btns"><button class="btn ok" id="btnIniciar">⚔️ Entrar na Torre</button><button class="btn" id="btnRegras">📖 Regras</button><a class="btn" href="cartas.html" style="text-decoration:none">🃏 Ver as cartas</a></div>
+  </div>
+</div>
+
+<div id="jogo" class="oculto">
+  <header>
+    <h1>🏰 TORRE DOS EXILADOS</h1>
+    <div id="banner"></div>
+    <div class="hdr-ctl"><label><input type="checkbox" id="chkRapido"> rápido</label><button class="btn" id="btnRegras2">📖 Regras</button><button class="btn oculto" id="btnResultado" onclick="document.getElementById('fim').classList.remove('oculto')">🏁 Resultado</button><button class="btn ok oculto" id="btnNovo" onclick="location.reload()">🔄 Jogar novamente</button></div>
+  </header>
+  <main>
+    <aside id="torre"></aside>
+    <section id="centro">
+      <div id="status" class="st"></div>
+      <div id="revelada"></div>
+      <div id="log"></div>
+    </section>
+    <aside id="rivais"></aside>
+  </main>
+  <div id="divisor" title="Arraste para ajustar o tamanho (duplo clique restaura)"></div>
+  <section id="jogador"></section>
+</div>
+
+<div id="modal" class="oculto"><div id="modalbox" class="modalbox"></div></div>
+<div id="fim" class="oculto"></div>
+<div id="toasts"></div>
+
+<script src="img/imagens.js"></script>
+<script src="dados/dados.js"></script>
+<script src="motor/motor_a.js"></script>
+<script src="motor/motor_b.js"></script>
+<script src="motor/motor_c.js"></script>
+<script src="motor/ui.js"></script>
+<script>
+// divisor arrastável: ajusta quanto da tela fica para a parte de cima (Torre/log) e para o painel do jogador
+(function(){
+  const jogo=document.getElementById('jogo'), div=document.getElementById('divisor'), main=jogo.querySelector('main');
+  const KEY='torre_altura_topo';
+  const aplica=px=>{ const max=jogo.clientHeight-180; px=Math.max(120,Math.min(px,max)); jogo.style.setProperty('--topoH',px+'px'); return px; };
+  try{ const v=+localStorage.getItem(KEY); if(v) jogo.dataset.salvo=v; }catch(e){}
+  const restaura=()=>{ if(jogo.dataset.salvo && jogo.clientHeight) aplica(+jogo.dataset.salvo); };
+  new MutationObserver(restaura).observe(jogo,{attributes:true,attributeFilter:['class']});
+  let y0=0,h0=0;
+  div.addEventListener('pointerdown',e=>{ y0=e.clientY; h0=main.offsetHeight; div.setPointerCapture(e.pointerId); div.classList.add('arrasta'); document.body.classList.add('redimensionando'); });
+  div.addEventListener('pointermove',e=>{ if(!div.hasPointerCapture(e.pointerId)) return; const h=aplica(h0+e.clientY-y0); jogo.dataset.salvo=h; });
+  const fim=e=>{ div.classList.remove('arrasta'); document.body.classList.remove('redimensionando'); try{ if(jogo.dataset.salvo) localStorage.setItem(KEY,jogo.dataset.salvo); }catch(_){} };
+  div.addEventListener('pointerup',fim); div.addEventListener('pointercancel',fim);
+  div.addEventListener('dblclick',()=>{ jogo.style.removeProperty('--topoH'); delete jogo.dataset.salvo; try{ localStorage.removeItem(KEY); }catch(_){} });
+})();
+</script>
+</body>
+</html>

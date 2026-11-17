@@ -1,0 +1,6 @@
+/img/*
+  Cache-Control: public, max-age=604800
+/motor/*
+  Cache-Control: public, max-age=300
+/dados/*
+  Cache-Control: public, max-age=300
